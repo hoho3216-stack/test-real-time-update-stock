@@ -4,6 +4,11 @@ Hong Kong Stock Price Viewer - Desktop Application
 A simple Tkinter-based GUI application for fetching and displaying real-time
 Hong Kong stock information using yfinance.
 
+Features:
+- Auto-refresh stock prices every 3 seconds
+- Clean, modern Tkinter interface
+- Real-time data from yfinance
+
 Usage:
     python app.py
 """
@@ -36,11 +41,19 @@ class StockPriceApp:
         self.current_data: Optional[Dict[str, Any]] = None
         self.is_loading = False
         
+        # Auto-refresh settings
+        self.auto_refresh_enabled = False
+        self.refresh_interval = 3000  # 3 seconds in milliseconds
+        self.refresh_timer_id: Optional[str] = None
+        
         # Configure style
         self.setup_styles()
         
         # Build the UI
         self.build_ui()
+        
+        # Handle window close event
+        self.root.protocol("WM_DELETE_WINDOW", self.on_close)
     
     def setup_styles(self) -> None:
         """Configure custom styles for the application."""
@@ -85,11 +98,20 @@ class StockPriceApp:
         
         # Refresh button
         self.refresh_button = ttk.Button(input_frame, text="Refresh", command=self.refresh_stock, state=tk.DISABLED)
-        self.refresh_button.grid(row=0, column=3, sticky=tk.W)
+        self.refresh_button.grid(row=0, column=3, sticky=tk.W, padx=(0, 5))
+        
+        # Auto-refresh toggle button
+        self.auto_refresh_button = ttk.Button(
+            input_frame,
+            text="Auto Refresh: OFF",
+            command=self.toggle_auto_refresh,
+            state=tk.DISABLED
+        )
+        self.auto_refresh_button.grid(row=0, column=4, sticky=tk.W, padx=(0, 5))
         
         # Loading indicator
         self.loading_label = ttk.Label(input_frame, text="", style='Status.TLabel')
-        self.loading_label.grid(row=0, column=4, sticky=tk.E, padx=(10, 0))
+        self.loading_label.grid(row=0, column=5, sticky=tk.E, padx=(10, 0))
         
         # ===== RESULTS SECTION =====
         results_frame = ttk.LabelFrame(main_frame, text="Stock Information", padding="10")
@@ -178,9 +200,17 @@ class StockPriceApp:
         # Disable buttons and show loading indicator
         self.search_button.config(state=tk.DISABLED)
         self.refresh_button.config(state=tk.DISABLED)
+        self.auto_refresh_button.config(state=tk.DISABLED)
         self.stock_code_entry.config(state=tk.DISABLED)
         self.loading_label.config(text="Loading... ⏳")
         self.status_label.config(text="Fetching data...")
+        
+        # Stop any existing auto-refresh
+        if self.refresh_timer_id:
+            self.root.after_cancel(self.refresh_timer_id)
+            self.refresh_timer_id = None
+        self.auto_refresh_enabled = False
+        self.auto_refresh_button.config(text="Auto Refresh: OFF", state=tk.DISABLED)
         
         # Run the fetch in a separate thread
         thread = threading.Thread(target=self._fetch_stock_data, args=(code,), daemon=True)
@@ -191,7 +221,54 @@ class StockPriceApp:
         if self.current_stock_code:
             self.stock_code_entry.delete(0, tk.END)
             self.stock_code_entry.insert(0, self.current_stock_code.replace('.HK', ''))
-            self.search_stock()
+            
+            # Disable buttons and show loading indicator
+            self.search_button.config(state=tk.DISABLED)
+            self.refresh_button.config(state=tk.DISABLED)
+            self.auto_refresh_button.config(state=tk.DISABLED)
+            self.stock_code_entry.config(state=tk.DISABLED)
+            self.loading_label.config(text="Refreshing... ⏳")
+            self.status_label.config(text="Fetching data...")
+            
+            # Run the fetch in a separate thread
+            thread = threading.Thread(target=self._fetch_stock_data, args=(self.current_stock_code.replace('.HK', ''),), daemon=True)
+            thread.start()
+    
+    def toggle_auto_refresh(self) -> None:
+        """Toggle auto-refresh on/off."""
+        self.auto_refresh_enabled = not self.auto_refresh_enabled
+        
+        if self.auto_refresh_enabled:
+            self.auto_refresh_button.config(text="Auto Refresh: ON")
+            self.status_label.config(text="Auto-refresh enabled (every 3 seconds)")
+            # Start auto-refresh
+            self._schedule_auto_refresh()
+        else:
+            self.auto_refresh_button.config(text="Auto Refresh: OFF")
+            self.status_label.config(text="Auto-refresh disabled")
+            # Cancel any pending auto-refresh
+            if self.refresh_timer_id:
+                self.root.after_cancel(self.refresh_timer_id)
+                self.refresh_timer_id = None
+    
+    def _schedule_auto_refresh(self) -> None:
+        """Schedule the next auto-refresh after 3 seconds."""
+        if self.auto_refresh_enabled and self.current_stock_code:
+            # Schedule the next refresh
+            self.refresh_timer_id = self.root.after(self.refresh_interval, self._auto_refresh)
+    
+    def _auto_refresh(self) -> None:
+        """Perform auto-refresh of stock data."""
+        if self.auto_refresh_enabled and self.current_stock_code:
+            self.loading_label.config(text="Auto-refreshing... ⏳")
+            
+            # Run the fetch in a separate thread
+            thread = threading.Thread(
+                target=self._fetch_stock_data,
+                args=(self.current_stock_code.replace('.HK', ''),),
+                daemon=True
+            )
+            thread.start()
     
     def _fetch_stock_data(self, code: str) -> None:
         """
@@ -241,6 +318,9 @@ class StockPriceApp:
         finally:
             # Re-enable buttons in main thread
             self.root.after(0, self._enable_buttons)
+            # Schedule next auto-refresh if enabled
+            if self.auto_refresh_enabled:
+                self.root.after(0, self._schedule_auto_refresh)
     
     def _display_stock_data(self, code: str, data: Dict[str, Any]) -> None:
         """
@@ -348,7 +428,10 @@ class StockPriceApp:
             ttk.Label(detail_frame, text=formatted_value, font=('Arial', 10), foreground='darkslategray').pack(side=tk.LEFT)
         
         # Update status and timestamp
-        self.status_label.config(text=f"✓ Stock data updated - {code}")
+        if self.auto_refresh_enabled:
+            self.status_label.config(text=f"✓ Stock data updated - {code} (Auto-refresh: ON)")
+        else:
+            self.status_label.config(text=f"✓ Stock data updated - {code}")
         self._update_timestamp()
         self.loading_label.config(text="")
     
@@ -358,6 +441,7 @@ class StockPriceApp:
         self.stock_code_entry.config(state=tk.NORMAL)
         if self.current_stock_code:
             self.refresh_button.config(state=tk.NORMAL)
+            self.auto_refresh_button.config(state=tk.NORMAL)
     
     def show_error(self, error_msg: str) -> None:
         """
@@ -386,6 +470,12 @@ class StockPriceApp:
         """Update the timestamp label with current time."""
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.time_label.config(text=f"Last updated: {current_time}")
+    
+    def on_close(self) -> None:
+        """Handle window close event - clean up auto-refresh timer."""
+        if self.refresh_timer_id:
+            self.root.after_cancel(self.refresh_timer_id)
+        self.root.destroy()
 
 
 def main() -> None:
