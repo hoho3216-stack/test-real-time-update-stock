@@ -1,1 +1,2 @@
 yfinance==0.2.32
+customtkinter==5.2.0
