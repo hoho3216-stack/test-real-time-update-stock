@@ -1,174 +1,230 @@
 #!/usr/bin/env python3
 """
-Hong Kong Stock Price Viewer - Desktop Application
-A simple Tkinter-based GUI application for fetching and displaying real-time
-Hong Kong stock information using yfinance.
+Hong Kong Stock Price Viewer - Modern Desktop Application
+A modern customtkinter-based GUI application for fetching and displaying real-time
+Hong Kong stock information using yfinance with dark/light theme support.
 
 Features:
+- Modern customtkinter UI with dark/light theme
 - Auto-refresh stock prices every 3 seconds
-- Clean, modern Tkinter interface
+- Theme toggle (dark/light mode)
 - Real-time data from yfinance
+- Responsive and beautiful design
 
 Usage:
     python app.py
 """
 
-import tkinter as tk
-from tkinter import ttk
+import customtkinter as ctk
 import threading
 from datetime import datetime
 import yfinance as yf
 from typing import Optional, Dict, Any
 
 
-class StockPriceApp:
-    """Main application class for stock price viewer."""
+# Configure customtkinter appearance
+ctk.set_appearance_mode("dark")  # Modes: "System", "Dark", "Light"
+ctk.set_default_color_theme("blue")  # Themes: "blue", "green", "dark-blue"
+
+
+class StockPriceApp(ctk.CTk):
+    """Main application class for stock price viewer using customtkinter."""
     
-    def __init__(self, root: tk.Tk) -> None:
-        """
-        Initialize the application.
+    def __init__(self) -> None:
+        """Initialize the modern application."""
+        super().__init__()
         
-        Args:
-            root: The root Tkinter window
-        """
-        self.root = root
-        self.root.title("Hong Kong Stock Price Viewer")
-        self.root.geometry("900x700")
-        self.root.minsize(700, 600)
+        # Window configuration
+        self.title("HK Stock Price Viewer")
+        self.geometry("1000x750")
+        self.minsize(800, 600)
         
         # Store the currently displayed stock data
         self.current_stock_code: str = ""
         self.current_data: Optional[Dict[str, Any]] = None
-        self.is_loading = False
         
         # Auto-refresh settings
         self.auto_refresh_enabled = False
         self.refresh_interval = 3000  # 3 seconds in milliseconds
         self.refresh_timer_id: Optional[str] = None
         
-        # Configure style
-        self.setup_styles()
+        # Set grid layout
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
         
         # Build the UI
         self.build_ui()
         
         # Handle window close event
-        self.root.protocol("WM_DELETE_WINDOW", self.on_close)
-    
-    def setup_styles(self) -> None:
-        """Configure custom styles for the application."""
-        style = ttk.Style()
-        style.theme_use('clam')
-        
-        # Define custom colors
-        style.configure('Header.TLabel', font=('Arial', 12, 'bold'))
-        style.configure('Title.TLabel', font=('Arial', 14, 'bold'))
-        style.configure('Status.TLabel', font=('Arial', 9))
-        style.configure('Error.TLabel', font=('Arial', 10), foreground='red')
-        style.configure('Success.TLabel', font=('Arial', 10), foreground='green')
-        style.configure('TButton', font=('Arial', 10))
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
     
     def build_ui(self) -> None:
-        """Build the main UI components."""
-        # Main frame with padding
-        main_frame = ttk.Frame(self.root, padding="10")
-        main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        """Build the main UI components with customtkinter."""
+        # Main container with proper spacing
+        main_container = ctk.CTkFrame(self, fg_color="transparent")
+        main_container.grid(row=0, column=0, sticky="nsew", padx=15, pady=15)
+        main_container.grid_rowconfigure(3, weight=1)
+        main_container.grid_columnconfigure(0, weight=1)
         
-        # Configure grid weights for resizing
-        self.root.columnconfigure(0, weight=1)
-        self.root.rowconfigure(0, weight=1)
-        main_frame.columnconfigure(1, weight=1)
-        main_frame.rowconfigure(2, weight=1)
+        # ===== HEADER =====
+        header_frame = ctk.CTkFrame(main_container, fg_color="transparent")
+        header_frame.grid(row=0, column=0, sticky="ew", pady=(0, 15))
+        header_frame.grid_columnconfigure(1, weight=1)
+        
+        # Title
+        title_label = ctk.CTkLabel(
+            header_frame,
+            text="📈 HK Stock Price Viewer",
+            font=("Helvetica", 24, "bold")
+        )
+        title_label.grid(row=0, column=0, sticky="w", padx=(0, 10))
+        
+        # Theme toggle button
+        self.theme_button = ctk.CTkButton(
+            header_frame,
+            text="🌙 Dark Mode",
+            command=self.toggle_theme,
+            width=120,
+            height=35,
+            corner_radius=8
+        )
+        self.theme_button.grid(row=0, column=1, sticky="e")
         
         # ===== INPUT SECTION =====
-        input_frame = ttk.LabelFrame(main_frame, text="Stock Search", padding="10")
-        input_frame.grid(row=0, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
-        input_frame.columnconfigure(1, weight=1)
+        input_frame = ctk.CTkFrame(main_container)
+        input_frame.grid(row=1, column=0, sticky="ew", pady=(0, 15))
+        input_frame.grid_columnconfigure(1, weight=1)
         
         # Stock code label and input
-        ttk.Label(input_frame, text="Stock Code (HK):").grid(row=0, column=0, sticky=tk.W, padx=(0, 5))
+        ctk.CTkLabel(
+            input_frame,
+            text="Stock Code (HK):",
+            font=("Helvetica", 12, "bold")
+        ).grid(row=0, column=0, sticky="w", padx=(10, 10), pady=10)
         
-        self.stock_code_entry = ttk.Entry(input_frame, font=('Arial', 11), width=20)
-        self.stock_code_entry.grid(row=0, column=1, sticky=tk.W, padx=(0, 10))
+        self.stock_code_entry = ctk.CTkEntry(
+            input_frame,
+            placeholder_text="e.g., 0700, 9988, 0005",
+            height=40,
+            border_width=2,
+            corner_radius=8,
+            font=("Helvetica", 12)
+        )
+        self.stock_code_entry.grid(row=0, column=1, sticky="ew", padx=10, pady=10)
         self.stock_code_entry.bind('<Return>', lambda e: self.search_stock())
         
-        # Search button
-        self.search_button = ttk.Button(input_frame, text="Get Price", command=self.search_stock)
-        self.search_button.grid(row=0, column=2, sticky=tk.W, padx=(0, 5))
+        # Button frame
+        button_frame = ctk.CTkFrame(input_frame, fg_color="transparent")
+        button_frame.grid(row=0, column=2, sticky="e", padx=(10, 0), pady=10)
+        button_frame.grid_columnconfigure((0, 1, 2, 3), weight=0)
+        
+        # Get Price button
+        self.search_button = ctk.CTkButton(
+            button_frame,
+            text="🔍 Get Price",
+            command=self.search_stock,
+            height=40,
+            width=100,
+            corner_radius=8,
+            font=("Helvetica", 11, "bold")
+        )
+        self.search_button.grid(row=0, column=0, padx=5)
         
         # Refresh button
-        self.refresh_button = ttk.Button(input_frame, text="Refresh", command=self.refresh_stock, state=tk.DISABLED)
-        self.refresh_button.grid(row=0, column=3, sticky=tk.W, padx=(0, 5))
-        
-        # Auto-refresh toggle button
-        self.auto_refresh_button = ttk.Button(
-            input_frame,
-            text="Auto Refresh: OFF",
-            command=self.toggle_auto_refresh,
-            state=tk.DISABLED
+        self.refresh_button = ctk.CTkButton(
+            button_frame,
+            text="🔄 Refresh",
+            command=self.refresh_stock,
+            state="disabled",
+            height=40,
+            width=100,
+            corner_radius=8,
+            font=("Helvetica", 11, "bold")
         )
-        self.auto_refresh_button.grid(row=0, column=4, sticky=tk.W, padx=(0, 5))
+        self.refresh_button.grid(row=0, column=1, padx=5)
+        
+        # Auto-refresh toggle
+        self.auto_refresh_button = ctk.CTkButton(
+            button_frame,
+            text="⏱️ Auto Refresh",
+            command=self.toggle_auto_refresh,
+            state="disabled",
+            height=40,
+            width=120,
+            corner_radius=8,
+            font=("Helvetica", 11, "bold"),
+            fg_color=["#1f6aa5", "#0d47a1"]
+        )
+        self.auto_refresh_button.grid(row=0, column=2, padx=5)
         
         # Loading indicator
-        self.loading_label = ttk.Label(input_frame, text="", style='Status.TLabel')
-        self.loading_label.grid(row=0, column=5, sticky=tk.E, padx=(10, 0))
+        self.loading_label = ctk.CTkLabel(
+            button_frame,
+            text="",
+            font=("Helvetica", 10)
+        )
+        self.loading_label.grid(row=0, column=3, padx=(10, 0))
         
         # ===== RESULTS SECTION =====
-        results_frame = ttk.LabelFrame(main_frame, text="Stock Information", padding="10")
-        results_frame.grid(row=2, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
-        results_frame.columnconfigure(0, weight=1)
-        results_frame.rowconfigure(0, weight=1)
+        results_frame = ctk.CTkFrame(main_container)
+        results_frame.grid(row=3, column=0, sticky="nsew", pady=(0, 15))
+        results_frame.grid_rowconfigure(0, weight=1)
+        results_frame.grid_columnconfigure(0, weight=1)
         
-        # Create a frame for the results with scrollbar
-        canvas_frame = ttk.Frame(results_frame)
-        canvas_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        canvas_frame.columnconfigure(0, weight=1)
-        canvas_frame.rowconfigure(0, weight=1)
+        # Results label
+        ctk.CTkLabel(
+            results_frame,
+            text="Stock Information",
+            font=("Helvetica", 14, "bold")
+        ).pack(anchor="w", padx=15, pady=(15, 10))
         
-        # Canvas and scrollbar
-        self.canvas = tk.Canvas(canvas_frame, bg='white', highlightthickness=0)
-        scrollbar = ttk.Scrollbar(canvas_frame, orient=tk.VERTICAL, command=self.canvas.yview)
-        self.scrollable_frame = ttk.Frame(self.canvas, padding="10")
-        
-        self.scrollable_frame.bind(
-            "<Configure>",
-            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        # Scrollable frame for results
+        self.scrollable_frame = ctk.CTkScrollableFrame(
+            results_frame,
+            corner_radius=10
         )
-        
-        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor=tk.NW)
-        self.canvas.configure(yscrollcommand=scrollbar.set)
-        
-        self.canvas.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
+        self.scrollable_frame.pack(fill="both", expand=True, padx=15, pady=(0, 15))
+        self.scrollable_frame.grid_columnconfigure(0, weight=1)
         
         # Initial message
-        self.info_label = ttk.Label(
+        self.info_label = ctk.CTkLabel(
             self.scrollable_frame,
             text="Enter a stock code (e.g., 0005, 0700, 9988) and click 'Get Price'",
-            justify=tk.CENTER,
-            foreground='gray'
+            font=("Helvetica", 13),
+            text_color=["gray50", "gray70"]
         )
-        self.info_label.pack(pady=20)
+        self.info_label.pack(pady=40)
         
         # ===== STATUS BAR =====
-        status_frame = ttk.Frame(main_frame)
-        status_frame.grid(row=3, column=0, columnspan=3, sticky=(tk.W, tk.E))
+        status_frame = ctk.CTkFrame(main_container, fg_color="transparent")
+        status_frame.grid(row=4, column=0, sticky="ew", pady=(10, 0))
+        status_frame.grid_columnconfigure(0, weight=1)
         
-        self.status_label = ttk.Label(
+        self.status_label = ctk.CTkLabel(
             status_frame,
             text="Ready",
-            style='Status.TLabel',
-            relief=tk.SUNKEN
+            font=("Helvetica", 10),
+            text_color=["gray50", "gray70"]
         )
-        self.status_label.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
+        self.status_label.grid(row=0, column=0, sticky="w")
         
-        self.time_label = ttk.Label(
+        self.time_label = ctk.CTkLabel(
             status_frame,
             text="",
-            style='Status.TLabel',
-            relief=tk.SUNKEN
+            font=("Helvetica", 10),
+            text_color=["gray50", "gray70"]
         )
-        self.time_label.pack(side=tk.RIGHT, fill=tk.X, padx=(5, 0))
+        self.time_label.grid(row=0, column=1, sticky="e")
+    
+    def toggle_theme(self) -> None:
+        """Toggle between dark and light theme."""
+        current_mode = ctk.get_appearance_mode()
+        new_mode = "light" if current_mode == "dark" else "dark"
+        ctk.set_appearance_mode(new_mode)
+        
+        # Update button text
+        button_text = "☀️ Light Mode" if new_mode == "dark" else "🌙 Dark Mode"
+        self.theme_button.configure(text=button_text)
     
     def format_stock_code(self, code: str) -> str:
         """
@@ -188,29 +244,25 @@ class StockPriceApp:
         return code
     
     def search_stock(self) -> None:
-        """
-        Search for stock data in a separate thread to avoid blocking the UI.
-        This method is called when the user clicks the "Get Price" button or presses Enter.
-        """
+        """Search for stock data in a separate thread."""
         code = self.stock_code_entry.get().strip()
         if not code:
             self.show_error("Please enter a stock code")
             return
         
         # Disable buttons and show loading indicator
-        self.search_button.config(state=tk.DISABLED)
-        self.refresh_button.config(state=tk.DISABLED)
-        self.auto_refresh_button.config(state=tk.DISABLED)
-        self.stock_code_entry.config(state=tk.DISABLED)
-        self.loading_label.config(text="Loading... ⏳")
-        self.status_label.config(text="Fetching data...")
+        self.search_button.configure(state="disabled")
+        self.refresh_button.configure(state="disabled")
+        self.auto_refresh_button.configure(state="disabled")
+        self.stock_code_entry.configure(state="disabled")
+        self.loading_label.configure(text="Loading... ⏳")
+        self.status_label.configure(text="Fetching data...")
         
         # Stop any existing auto-refresh
         if self.refresh_timer_id:
-            self.root.after_cancel(self.refresh_timer_id)
+            self.after_cancel(self.refresh_timer_id)
             self.refresh_timer_id = None
         self.auto_refresh_enabled = False
-        self.auto_refresh_button.config(text="Auto Refresh: OFF", state=tk.DISABLED)
         
         # Run the fetch in a separate thread
         thread = threading.Thread(target=self._fetch_stock_data, args=(code,), daemon=True)
@@ -219,19 +271,23 @@ class StockPriceApp:
     def refresh_stock(self) -> None:
         """Refresh the currently displayed stock data."""
         if self.current_stock_code:
-            self.stock_code_entry.delete(0, tk.END)
+            self.stock_code_entry.delete(0, "end")
             self.stock_code_entry.insert(0, self.current_stock_code.replace('.HK', ''))
             
             # Disable buttons and show loading indicator
-            self.search_button.config(state=tk.DISABLED)
-            self.refresh_button.config(state=tk.DISABLED)
-            self.auto_refresh_button.config(state=tk.DISABLED)
-            self.stock_code_entry.config(state=tk.DISABLED)
-            self.loading_label.config(text="Refreshing... ⏳")
-            self.status_label.config(text="Fetching data...")
+            self.search_button.configure(state="disabled")
+            self.refresh_button.configure(state="disabled")
+            self.auto_refresh_button.configure(state="disabled")
+            self.stock_code_entry.configure(state="disabled")
+            self.loading_label.configure(text="Refreshing... ⏳")
+            self.status_label.configure(text="Fetching data...")
             
             # Run the fetch in a separate thread
-            thread = threading.Thread(target=self._fetch_stock_data, args=(self.current_stock_code.replace('.HK', ''),), daemon=True)
+            thread = threading.Thread(
+                target=self._fetch_stock_data,
+                args=(self.current_stock_code.replace('.HK', ''),),
+                daemon=True
+            )
             thread.start()
     
     def toggle_auto_refresh(self) -> None:
@@ -239,30 +295,32 @@ class StockPriceApp:
         self.auto_refresh_enabled = not self.auto_refresh_enabled
         
         if self.auto_refresh_enabled:
-            self.auto_refresh_button.config(text="Auto Refresh: ON")
-            self.status_label.config(text="Auto-refresh enabled (every 3 seconds)")
-            # Start auto-refresh
+            self.auto_refresh_button.configure(
+                fg_color=["#28a745", "#20c997"],
+                text="⏱️ Auto: ON"
+            )
+            self.status_label.configure(text="Auto-refresh enabled (every 3 seconds)")
             self._schedule_auto_refresh()
         else:
-            self.auto_refresh_button.config(text="Auto Refresh: OFF")
-            self.status_label.config(text="Auto-refresh disabled")
-            # Cancel any pending auto-refresh
+            self.auto_refresh_button.configure(
+                fg_color=["#1f6aa5", "#0d47a1"],
+                text="⏱️ Auto: OFF"
+            )
+            self.status_label.configure(text="Auto-refresh disabled")
             if self.refresh_timer_id:
-                self.root.after_cancel(self.refresh_timer_id)
+                self.after_cancel(self.refresh_timer_id)
                 self.refresh_timer_id = None
     
     def _schedule_auto_refresh(self) -> None:
         """Schedule the next auto-refresh after 3 seconds."""
         if self.auto_refresh_enabled and self.current_stock_code:
-            # Schedule the next refresh
-            self.refresh_timer_id = self.root.after(self.refresh_interval, self._auto_refresh)
+            self.refresh_timer_id = self.after(self.refresh_interval, self._auto_refresh)
     
     def _auto_refresh(self) -> None:
         """Perform auto-refresh of stock data."""
         if self.auto_refresh_enabled and self.current_stock_code:
-            self.loading_label.config(text="Auto-refreshing... ⏳")
+            self.loading_label.configure(text="Auto-refreshing... ⏳")
             
-            # Run the fetch in a separate thread
             thread = threading.Thread(
                 target=self._fetch_stock_data,
                 args=(self.current_stock_code.replace('.HK', ''),),
@@ -281,7 +339,7 @@ class StockPriceApp:
             formatted_code = self.format_stock_code(code)
             
             if not formatted_code:
-                self.root.after(0, self.show_error, "Invalid stock code")
+                self.after(0, self.show_error, "Invalid stock code")
                 return
             
             # Fetch stock data using yfinance
@@ -290,7 +348,7 @@ class StockPriceApp:
             
             # Check if we got valid data
             if not info or 'shortName' not in info:
-                self.root.after(0, self.show_error, f"Stock code '{code}' not found or invalid")
+                self.after(0, self.show_error, f"Stock code '{code}' not found or invalid")
                 return
             
             # Extract relevant information
@@ -310,94 +368,107 @@ class StockPriceApp:
             self.current_data = stock_data
             
             # Update UI in main thread
-            self.root.after(0, self._display_stock_data, formatted_code, stock_data)
+            self.after(0, self._display_stock_data, formatted_code, stock_data)
             
         except Exception as e:
             error_msg = str(e)
-            self.root.after(0, self.show_error, f"Error: {error_msg}")
+            self.after(0, self.show_error, f"Error: {error_msg}")
         finally:
             # Re-enable buttons in main thread
-            self.root.after(0, self._enable_buttons)
+            self.after(0, self._enable_buttons)
             # Schedule next auto-refresh if enabled
             if self.auto_refresh_enabled:
-                self.root.after(0, self._schedule_auto_refresh)
+                self.after(0, self._schedule_auto_refresh)
     
     def _display_stock_data(self, code: str, data: Dict[str, Any]) -> None:
-        """
-        Display fetched stock data in the UI.
-        
-        Args:
-            code: Stock code
-            data: Dictionary containing stock information
-        """
+        """Display fetched stock data in the UI."""
         # Clear previous widgets
         for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
         
         # Stock name
-        name_label = ttk.Label(
+        name_label = ctk.CTkLabel(
             self.scrollable_frame,
             text=f"{data['shortName']} ({code})",
-            style='Title.TLabel'
+            font=("Helvetica", 18, "bold")
         )
-        name_label.pack(pady=(0, 15))
+        name_label.pack(pady=(0, 20))
         
         # Get current price
         current_price = data.get('currentPrice') or data.get('regularMarketPrice', 'N/A')
         
         # Create main info frame
-        main_info_frame = ttk.Frame(self.scrollable_frame)
-        main_info_frame.pack(fill=tk.X, pady=(0, 20))
+        main_info_frame = ctk.CTkFrame(self.scrollable_frame, fg_color="transparent")
+        main_info_frame.pack(fill="x", pady=(0, 20))
         
         # Price display
-        price_frame = ttk.Frame(main_info_frame)
-        price_frame.pack(side=tk.LEFT, padx=(0, 30))
+        price_frame = ctk.CTkFrame(main_info_frame, fg_color="transparent")
+        price_frame.pack(side="left", padx=(0, 40))
         
-        ttk.Label(price_frame, text="Price:", style='Header.TLabel').pack(anchor=tk.W)
+        ctk.CTkLabel(
+            price_frame,
+            text="Price:",
+            font=("Helvetica", 11, "bold"),
+            text_color=["gray50", "gray70"]
+        ).pack(anchor="w")
         
         if isinstance(current_price, (int, float)):
-            price_label = ttk.Label(
+            price_label = ctk.CTkLabel(
                 price_frame,
                 text=f"HK${current_price:.2f}",
-                font=('Arial', 20, 'bold'),
-                foreground='darkblue'
+                font=("Helvetica", 26, "bold"),
+                text_color="#3498db"
             )
         else:
-            price_label = ttk.Label(price_frame, text=str(current_price), font=('Arial', 20, 'bold'))
-        price_label.pack(anchor=tk.W)
+            price_label = ctk.CTkLabel(price_frame, text=str(current_price), font=("Helvetica", 26, "bold"))
+        price_label.pack(anchor="w")
         
         # Change percentage
         change_pct = data.get('regularMarketChangePercent', 'N/A')
         change = data.get('regularMarketChange', 'N/A')
         
-        change_frame = ttk.Frame(main_info_frame)
-        change_frame.pack(side=tk.LEFT, padx=(0, 30))
+        change_frame = ctk.CTkFrame(main_info_frame, fg_color="transparent")
+        change_frame.pack(side="left", padx=(0, 40))
         
-        ttk.Label(change_frame, text="Change:", style='Header.TLabel').pack(anchor=tk.W)
+        ctk.CTkLabel(
+            change_frame,
+            text="Change:",
+            font=("Helvetica", 11, "bold"),
+            text_color=["gray50", "gray70"]
+        ).pack(anchor="w")
         
         if isinstance(change_pct, (int, float)):
-            change_color = 'green' if change_pct >= 0 else 'red'
+            change_color = "#27ae60" if change_pct >= 0 else "#e74c3c"
             sign = '+' if change_pct >= 0 else ''
             change_text = f"{sign}{change_pct:.2f}%"
             change_value = f"{sign}{change:.2f}" if isinstance(change, (int, float)) else str(change)
             
-            change_label = ttk.Label(
+            change_label = ctk.CTkLabel(
                 change_frame,
                 text=f"{change_text} ({change_value})",
-                font=('Arial', 14, 'bold'),
-                foreground=change_color
+                font=("Helvetica", 18, "bold"),
+                text_color=change_color
             )
         else:
-            change_label = ttk.Label(change_frame, text=str(change_pct), font=('Arial', 14, 'bold'))
+            change_label = ctk.CTkLabel(change_frame, text=str(change_pct), font=("Helvetica", 18, "bold"))
         
-        change_label.pack(anchor=tk.W)
+        change_label.pack(anchor="w")
         
         # Separator
-        ttk.Separator(self.scrollable_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=15)
+        separator = ctk.CTkFrame(self.scrollable_frame, height=2, fg_color=["gray70", "gray30"])
+        separator.pack(fill="x", pady=20)
         
-        # Details section
-        details_label = ttk.Label(self.scrollable_frame, text="Details", style='Header.TLabel')
-        details_label.pack(anchor=tk.W, pady=(0, 10))
+        # Details section label
+        details_label = ctk.CTkLabel(
+            self.scrollable_frame,
+            text="Details",
+            font=("Helvetica", 13, "bold")
+        )
+        details_label.pack(anchor="w", pady=(0, 10))
+        
+        # Details frame
+        details_container = ctk.CTkFrame(self.scrollable_frame, fg_color="transparent")
+        details_container.pack(fill="x", pady=(0, 10))
         
         # Details in a grid format
         details = [
@@ -407,12 +478,21 @@ class StockPriceApp:
             ("Volume", data.get('regularMarketVolume', 'N/A')),
         ]
         
-        for label, value in details:
-            detail_frame = ttk.Frame(self.scrollable_frame)
-            detail_frame.pack(fill=tk.X, pady=5)
+        for idx, (label, value) in enumerate(details):
+            # Create row frame
+            row_frame = ctk.CTkFrame(details_container, fg_color="transparent")
+            row_frame.pack(fill="x", pady=5)
             
-            ttk.Label(detail_frame, text=f"{label}:", width=20, font=('Arial', 10)).pack(side=tk.LEFT)
+            # Label
+            ctk.CTkLabel(
+                row_frame,
+                text=f"{label}:",
+                font=("Helvetica", 11, "bold"),
+                text_color=["gray50", "gray70"],
+                width=120
+            ).pack(side="left", anchor="w")
             
+            # Value formatting
             if label == "Volume" and isinstance(value, (int, float)):
                 if value >= 1_000_000:
                     formatted_value = f"{value / 1_000_000:.2f}M"
@@ -425,64 +505,71 @@ class StockPriceApp:
             else:
                 formatted_value = str(value)
             
-            ttk.Label(detail_frame, text=formatted_value, font=('Arial', 10), foreground='darkslategray').pack(side=tk.LEFT)
+            ctk.CTkLabel(
+                row_frame,
+                text=formatted_value,
+                font=("Helvetica", 11),
+                text_color=["gray30", "gray80"]
+            ).pack(side="left")
         
         # Update status and timestamp
-        if self.auto_refresh_enabled:
-            self.status_label.config(text=f"✓ Stock data updated - {code} (Auto-refresh: ON)")
-        else:
-            self.status_label.config(text=f"✓ Stock data updated - {code}")
+        auto_status = " (Auto-refresh: ON)" if self.auto_refresh_enabled else ""
+        self.status_label.configure(text=f"✓ Stock data updated - {code}{auto_status}")
         self._update_timestamp()
-        self.loading_label.config(text="")
+        self.loading_label.configure(text="")
     
     def _enable_buttons(self) -> None:
         """Re-enable UI buttons after data fetch completes."""
-        self.search_button.config(state=tk.NORMAL)
-        self.stock_code_entry.config(state=tk.NORMAL)
+        self.search_button.configure(state="normal")
+        self.stock_code_entry.configure(state="normal")
         if self.current_stock_code:
-            self.refresh_button.config(state=tk.NORMAL)
-            self.auto_refresh_button.config(state=tk.NORMAL)
+            self.refresh_button.configure(state="normal")
+            self.auto_refresh_button.configure(state="normal")
     
     def show_error(self, error_msg: str) -> None:
-        """
-        Display error message in the results area.
-        
-        Args:
-            error_msg: Error message to display
-        """
+        """Display error message in the results area."""
         # Clear previous widgets
         for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
         
-        error_label = ttk.Label(
-            self.scrollable_frame,
-            text=error_msg,
-            style='Error.TLabel',
-            font=('Arial', 12),
-            justify=tk.CENTER
-        )
-        error_label.pack(pady=20)
+        # Error frame
+        error_frame = ctk.CTkFrame(self.scrollable_frame, fg_color="transparent")
+        error_frame.pack(pady=40)
         
-        self.status_label.config(text=f"✗ Error: {error_msg}")
-        self.loading_label.config(text="")
+        # Error icon and message
+        ctk.CTkLabel(
+            error_frame,
+            text="⚠️",
+            font=("Helvetica", 40)
+        ).pack(pady=(0, 10))
+        
+        error_label = ctk.CTkLabel(
+            error_frame,
+            text=error_msg,
+            font=("Helvetica", 13),
+            text_color="#e74c3c"
+        )
+        error_label.pack()
+        
+        self.status_label.configure(text=f"✗ Error: {error_msg}")
+        self.loading_label.configure(text="")
     
     def _update_timestamp(self) -> None:
         """Update the timestamp label with current time."""
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        self.time_label.config(text=f"Last updated: {current_time}")
+        self.time_label.configure(text=f"Last updated: {current_time}")
     
     def on_close(self) -> None:
         """Handle window close event - clean up auto-refresh timer."""
         if self.refresh_timer_id:
-            self.root.after_cancel(self.refresh_timer_id)
-        self.root.destroy()
+            self.after_cancel(self.refresh_timer_id)
+        self.destroy()
 
 
 def main() -> None:
     """Main entry point for the application."""
-    root = tk.Tk()
-    app = StockPriceApp(root)
-    root.mainloop()
+    app = StockPriceApp()
+    app.mainloop()
 
 
 if __name__ == "__main__":
