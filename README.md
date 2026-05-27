@@ -1,75 +1,71 @@
-# eNet Stock Real-Time Quote Desktop App
+# Hong Kong Stock Price Viewer
 
-A desktop application to fetch and display real-time stock prices from [eNet Hong Kong](https://www.etnet.com.hk/).
+A simple Python desktop application for viewing real-time stock prices for Hong Kong stocks using a clean Tkinter interface.
 
 ## Features
 
-- 🔍 Search stocks by code
-- 📊 Real-time price updates from eNet
-- 💻 Cross-platform desktop UI (Windows, macOS, Linux)
-- ⚡ Lightweight and responsive
+✅ Clean and modern Tkinter GUI
+✅ Search Hong Kong stocks by code (0005, 0700, 9988, etc.)
+✅ Auto-format input with .HK suffix
+✅ Display real-time stock information:
+  - Stock name / company name
+  - Current price
+  - Price change and change percentage
+  - Volume
+  - Previous close
+  - Day high / low
 
-## Setup
+✅ Loading indicator while fetching data
+✅ Error handling for invalid codes and network issues
+✅ Refresh button to update current stock
+✅ Status bar showing last updated time
+✅ Resizable window with reasonable default size
+✅ Threading to prevent UI freezing
 
-### Prerequisites
+## Requirements
 
 - Python 3.7+
-- pip
+- tkinter (usually included with Python)
+- yfinance
 
-### Installation
+## Installation
 
-1. Clone the repository
+1. Clone the repository:
 ```bash
 git clone https://github.com/hoho3216-stack/test-real-time-update-stock.git
 cd test-real-time-update-stock
 ```
 
-2. Install dependencies
+2. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Run the application
-```bash
-python main.py
-```
-
 ## Usage
 
-1. Enter a stock code (e.g., `0001` for HSBC)
-2. Press Enter or click the "Search" button
-3. The app will fetch data from eNet and display results
-
-## Technical Details
-
-- **Data Source**: https://www.etnet.com.hk/www/tc/stocks/realtime/quote.php
-- **UI Framework**: PyQt5
-- **Web Scraping**: BeautifulSoup4
-- **HTTP Client**: requests
-
-## Architecture
-
-```
-main.py              - Main application entry point
-├── StockQuoteApp    - Main window and UI
-└── StockFetcherThread - Background worker thread
-
-stock_fetcher.py     - Data fetching logic
-└── StockFetcher     - Handles eNet API requests
+Run the application:
+```bash
+python app.py
 ```
 
-## TODO
+1. Enter a Hong Kong stock code (e.g., `0005` for HSTECH, `0700` for Tencent, `9988` for Alibaba)
+2. Press Enter or click the "Get Price" button
+3. View the stock information displayed
+4. Click "Refresh" to update the current stock
+5. Search for another stock by entering a new code
 
-- [ ] Parse and extract specific price fields from eNet
-- [ ] Add price history/charting
-- [ ] Implement data caching
-- [ ] Add favorites/watchlist
-- [ ] Create executable installers
+## Supported Stock Codes (Examples)
+
+- 0001 - HSBC Holdings
+- 0005 - HSTECH (Hang Seng Tech Index ETF)
+- 0700 - Tencent
+- 9988 - Alibaba (HK listed)
+- 2800 - Tracker Fund of Hong Kong
 
 ## License
 
 MIT
 
-## Contributing
+## Author
 
-Feel free to submit issues and pull requests.
+Created for tracking Hong Kong stock prices easily.
